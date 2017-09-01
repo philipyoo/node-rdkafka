@@ -22,11 +22,11 @@
                   '<(module_root_dir)/deps/librdkafka/win32/librdkafka.sln'
                 ],
                 'outputs': [
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/Win32/Release/librdkafkacpp.lib'
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib'
                 ],
                 # Fun story export PATH="$PATH:/c/Program Files (x86)/MSBuild/12.0/Bin/"
                 # I wish there was a better way, but can't find one right now
-                'action': ['msbuild', '<@(_inputs)', '/p:Configuration="Release"', '/p:Platform="Win32"', '/t:librdkafkacpp']
+                'action': ['msbuild', '<@(_inputs)', '/p:Configuration="Release"', '/p:Platform="x64"', '/t:librdkafkacpp']
               }
             ],
           },

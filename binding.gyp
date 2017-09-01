@@ -26,7 +26,7 @@
             },
             'link_settings': {
               'libraries': [
-                '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/Win32/Release/librdkafkacpp.lib'
+                '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib'
               ]
             },
             'msvs_version': '2013',
