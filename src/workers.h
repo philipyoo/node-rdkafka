@@ -12,7 +12,11 @@
 
 #include <uv.h>
 #include <nan.h>
+#ifndef _WIN32
 #include <unistd.h>
+#else
+// Windows specific
+#endif
 #include <string>
 #include <vector>
 

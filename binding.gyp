@@ -1,9 +1,8 @@
 {
   "variables": {
       # may be redefined in command line on configuration stage
-      "BUILD_LIBRDKAFKA%": "<!(echo ${BUILD_LIBRDKAFKA:-1})",
-      "WITH_SASL%": "<!(echo ${WITH_SASL:-1})",
-      "WITH_LZ4%": "<!(echo ${WITH_LZ4:-0})"
+      # "build_librdkafka%": "<!(echo ${BUILD_LIBRDKAFKA:-1})"
+      "build_librdkafka%": "1"
   },
   "targets": [
     {
@@ -14,81 +13,73 @@
         "<(module_root_dir)/"
       ],
       'conditions': [
-        [ "<(BUILD_LIBRDKAFKA)==1",
-            {
-                "dependencies": [
-                    "<(module_root_dir)/deps/librdkafka.gyp:librdkafka_cpp"
-                ],
-                "include_dirs": [ "deps/librdkafka/src-cpp" ],
-            },
-            # Else link against globally installed rdkafka and use
-            # globally installed headers.  On Debian, you should
-            # install the librdkafka1, librdkafka++1, and librdkafka-dev
-            # .deb packages.
-            {
-                "libraries": ["-lrdkafka", "-lrdkafka++"],
-                "include_dirs": [
-                    "/usr/include/librdkafka",
-                    "/usr/local/include/librdkafka"
-                ],
-            },
-        ],
-        [
-          'OS=="linux"',
-          {
-            'cflags_cc' : [
-              '-std=c++11'
-            ],
-            'cflags_cc!': [
-              '-fno-rtti'
-            ]
-          }
-        ],
         [
           'OS=="win"',
           {
             'cflags_cc' : [
               '-std=c++11'
-            ]
-          }
-        ],
-        [
-          'OS=="mac"',
-          {
-            'xcode_settings': {
-              'MACOSX_DEPLOYMENT_TARGET': '10.11',
-              'GCC_ENABLE_CPP_RTTI': 'YES',
-              'OTHER_CPLUSPLUSFLAGS': [
-                '-std=c++11'
-              ],
+            ],
+            'msvs_settings': {
+              'VCCLCompilerTool': {
+
+              }
             },
-          }
-        ],
-        [ "<(WITH_SASL)==1",
+            'link_settings': {
+              'libraries': [
+                '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/Win32/Release/librdkafkacpp.lib'
+              ]
+            },
+            'msvs_version': '2013',
+            'msbuild_toolset': 'v120',
+            "dependencies": [
+              "<(module_root_dir)/deps/librdkafka.gyp:librdkafka_cpp"
+            ],
+            "include_dirs": [ "deps/librdkafka/src-cpp" ]
+          },
           {
-            'libraries' : ['-lsasl2'],
             'conditions': [
-              [ 'OS=="mac"',
+              [ "<(build_librdkafka)==1",
                 {
-                  'xcode_settings': {
-                    'libraries' : ['-lsasl2']
-                  }
+                  "dependencies": [
+                      "<(module_root_dir)/deps/librdkafka.gyp:librdkafka_cpp"
+                  ],
+                  "include_dirs": [ "deps/librdkafka/src-cpp" ],
+                },
+                # Else link against globally installed rdkafka and use
+                # globally installed headers.  On Debian, you should
+                # install the librdkafka1, librdkafka++1, and librdkafka-dev
+                # .deb packages.
+                {
+                  "libraries": ["-lrdkafka", "-lrdkafka++"],
+                  "include_dirs": [
+                    "/usr/include/librdkafka",
+                    "/usr/local/include/librdkafka"
+                  ],
+                },
+              ],
+              [
+                'OS=="linux"',
+                {
+                  'cflags_cc' : [
+                    '-std=c++11'
+                  ],
+                  'cflags_cc!': [
+                    '-fno-rtti'
+                  ]
                 }
               ],
-            ]
-          }
-        ],
-        [ "<(WITH_LZ4)==1",
-          {
-            'libraries' : ['-llz4'],
-            'conditions': [
-              [ 'OS=="mac"',
+              [
+                'OS=="mac"',
                 {
                   'xcode_settings': {
-                    'libraries' : ['-llz4']
-                  }
+                    'MACOSX_DEPLOYMENT_TARGET': '10.11',
+                    'GCC_ENABLE_CPP_RTTI': 'YES',
+                    'OTHER_CPLUSPLUSFLAGS': [
+                      '-std=c++11'
+                    ],
+                  },
                 }
-              ],
+              ]
             ]
           }
         ]
