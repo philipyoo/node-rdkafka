@@ -21,27 +21,29 @@
             ],
             'msvs_settings': {
               'VCCLCompilerTool': {
-
+                'AdditionalOptions': [
+                  '/GR'
+                ],
+                'AdditionalUsingDirectories': [
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/'
+                ]
               }
-            },
-            'link_settings': {
-              'libraries': [
-                '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib'
-              ]
             },
             'msvs_version': '2013',
             'msbuild_toolset': 'v120',
             "dependencies": [
-              "<(module_root_dir)/deps/librdkafka.gyp:librdkafka_cpp"
+              "<(module_root_dir)/deps/librdkafka.gyp:librdkafkacpp"
             ],
-            "include_dirs": [ "deps/librdkafka/src-cpp" ]
+            'include_dirs': [
+              'deps/librdkafka/src-cpp'
+            ]
           },
           {
             'conditions': [
               [ "<(build_librdkafka)==1",
                 {
                   "dependencies": [
-                      "<(module_root_dir)/deps/librdkafka.gyp:librdkafka_cpp"
+                      "<(module_root_dir)/deps/librdkafka.gyp:librdkafkacpp"
                   ],
                   "include_dirs": [ "deps/librdkafka/src-cpp" ],
                 },

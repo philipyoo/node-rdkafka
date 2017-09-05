@@ -7,12 +7,12 @@
   },
   'targets': [
     {
-      "target_name": "librdkafka_cpp",
+      "target_name": "librdkafkacpp",
       'conditions': [
         [
           'OS=="win"',
           {
-            'type': 'none',
+            'type': 'static_library',
             'msvs_version': '2013',
             'msbuild_toolset': 'v120',
             'actions': [
@@ -22,13 +22,23 @@
                   '<(module_root_dir)/deps/librdkafka/win32/librdkafka.sln'
                 ],
                 'outputs': [
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib'
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.dll',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll'
                 ],
                 # Fun story export PATH="$PATH:/c/Program Files (x86)/MSBuild/12.0/Bin/"
                 # I wish there was a better way, but can't find one right now
                 'action': ['msbuild', '<@(_inputs)', '/p:Configuration="Release"', '/p:Platform="x64"', '/t:librdkafkacpp']
               }
             ],
+            'libraries': [
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll',
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib',
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.dll',
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll'
+            ]
           },
           {
             "type": "static_library",
