@@ -23,21 +23,41 @@
                 ],
                 'outputs': [
                   '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib',
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll',
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib',
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.dll',
-                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll'
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib'
                 ],
                 # Fun story export PATH="$PATH:/c/Program Files (x86)/MSBuild/12.0/Bin/"
                 # I wish there was a better way, but can't find one right now
                 'action': ['msbuild', '<@(_inputs)', '/p:Configuration="Release"', '/p:Platform="x64"', '/t:librdkafkacpp']
               }
             ],
+            'copies': [
+              {
+                'files': [
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.dll',
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll'
+                ],
+                'destination': '<(module_root_dir)/build/Release'
+              }
+            ],
             'libraries': [
-              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll',
-              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib',
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.lib',
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.lib'
+            ],
+            'build_files': [
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll',
               '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafka.dll',
-              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/zlib.dll'
+              '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/librdkafkacpp.dll',
+            ],
+            'msvs_settings': {
+              'VCCLCompilerTool': {
+                'AdditionalUsingDirectories': [
+                  '<(module_root_dir)/deps/librdkafka/win32/outdir/v120/x64/Release/'
+                ]
+              }
+            },
+            'sources': [
+              'win.cc'
             ]
           },
           {
