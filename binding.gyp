@@ -7,7 +7,18 @@
   "targets": [
     {
       "target_name": "node-librdkafka",
-      "sources": [ "<!@(ls -1 src/*.cc)", ],
+      'sources': [
+        'src/binding.cc',
+        'src/callbacks.cc',
+        'src/common.cc',
+        'src/config.cc',
+        'src/connection.cc',
+        'src/errors.cc',
+        'src/kafka-consumer.cc',
+        'src/producer.cc',
+        'src/topic.cc',
+        'src/workers.cc'
+      ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "<(module_root_dir)/"
