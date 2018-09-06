@@ -24,7 +24,9 @@ describe('Consumer', function() {
      gcfg = {
       'bootstrap.servers': kafkaBrokerList,
       'group.id': grp,
-      'debug': 'all'
+      'debug': 'all',
+      'rebalance_cb': true,
+      'enable.auto.commit': false
     };
   });
 
@@ -41,17 +43,24 @@ describe('Consumer', function() {
       eventListener(consumer);
     });
 
+    it('should allow commit with an array', function(done) {
+      consumer.commit([{ topic: topic, partition: 0, offset: -1 }]);
+      done();
+    });
+
+    it('should allow commit without an array', function(done) {
+      consumer.commit({ topic: topic, partition: 0, offset: -1 });
+      done();
+    });
+
     afterEach(function(done) {
       consumer.disconnect(function() {
         done();
       });
     });
-
   });
 
-
   describe('committed and position', function() {
-
     var consumer;
     beforeEach(function(done) {
       consumer = new KafkaConsumer(gcfg, {});
@@ -71,7 +80,8 @@ describe('Consumer', function() {
     });
 
     it('before assign, committed offsets are empty', function(done) {
-      consumer.committed(1000, function(err, committed) {
+      consumer.committed(null, 1000, function(err, committed) {
+        t.ifError(err);
         t.equal(Array.isArray(committed), true, 'Committed offsets should be an array');
         t.equal(committed.length, 0);
         done();
@@ -88,7 +98,7 @@ describe('Consumer', function() {
       consumer.assign([{topic:topic, partition:0}]);
       // Defer this for a second
       setTimeout(function() {
-        consumer.committed(1000, function(err, committed) {
+        consumer.committed(null, 1000, function(err, committed) {
           t.ifError(err);
           t.equal(committed.length, 1);
           t.equal(typeof committed[0], 'object', 'TopicPartition should be an object');
@@ -103,7 +113,7 @@ describe('Consumer', function() {
       this.timeout(6000);
       consumer.assign([{topic:topic, partition:0}]);
       consumer.commitSync({topic:topic, partition:0, offset:1000});
-      consumer.committed(1000, function(err, committed) {
+      consumer.committed(null, 1000, function(err, committed) {
         t.ifError(err);
         t.equal(committed.length, 1);
         t.equal(typeof committed[0], 'object', 'TopicPartition should be an object');
@@ -112,6 +122,7 @@ describe('Consumer', function() {
         done();
       });
     });
+
     it('after assign, before consume, position should return an array without offsets', function(done) {
       consumer.assign([{topic:topic, partition:0}]);
       var position = consumer.position();
@@ -126,7 +137,7 @@ describe('Consumer', function() {
     });
 
     it('should obey the timeout', function(done) {
-      consumer.committed(0, function(err, committed) {
+      consumer.committed(null, 0, function(err, committed) {
         if (!err) {
           t.fail(err, 'not null', 'Error should be set for a timeout');
         }
@@ -134,6 +145,53 @@ describe('Consumer', function() {
       });
     });
 
+  });
+
+  describe('seek and positioning', function() {
+    var consumer;
+    beforeEach(function(done) {
+      consumer = new KafkaConsumer(gcfg, {});
+
+      consumer.connect({ timeout: 2000 }, function(err, info) {
+        t.ifError(err);
+        consumer.assign([{
+          topic: 'test',
+          partition: 0,
+          offset: 0
+        }]);
+        done();
+      });
+
+      eventListener(consumer);
+    });
+
+    afterEach(function(done) {
+      consumer.disconnect(function() {
+        done();
+      });
+    });
+
+    it('should be able to seek', function(cb) {
+      consumer.seek({
+        topic: 'test',
+        partition: 0,
+        offset: 0
+      }, 1, function(err) {
+        t.ifError(err);
+        cb();
+      });
+    });
+
+    it('should be able to seek with a timeout of 0', function(cb) {
+      consumer.seek({
+        topic: 'test',
+        partition: 0,
+        offset: 0
+      }, 0, function(err) {
+        t.ifError(err);
+        cb();
+      });
+    });
   });
 
   describe('subscribe', function() {
@@ -246,7 +304,6 @@ describe('Consumer', function() {
       this.timeout(11000);
 
       var consumer = new KafkaConsumer(gcfg, tcfg);
-
       consumer.setDefaultConsumeTimeout(10000);
 
       consumer.connect({ timeout: 2000 }, function(err, info) {
@@ -288,5 +345,6 @@ describe('Consumer', function() {
 
       });
     });
+
   });
 });

@@ -12,11 +12,72 @@
 
 #include "src/workers.h"
 
+#ifndef _WIN32
+#include <unistd.h>
+#else
+// Windows specific
+#include <time.h>
+#endif
+
 using NodeKafka::Producer;
 using NodeKafka::Connection;
 
 namespace NodeKafka {
 namespace Workers {
+
+namespace Handle {
+/**
+ * @brief Handle: get offsets for times.
+ *
+ * This callback will take a topic partition list with timestamps and
+ * for each topic partition, will fill in the offsets. It is done async
+ * because it has a timeout and I don't want node to block
+ *
+ * @see RdKafka::KafkaConsumer::Committed
+ */
+
+OffsetsForTimes::OffsetsForTimes(Nan::Callback *callback,
+                                 Connection* handle,
+                                 std::vector<RdKafka::TopicPartition*> & t,
+                                 const int & timeout_ms) :
+  ErrorAwareWorker(callback),
+  m_handle(handle),
+  m_topic_partitions(t),
+  m_timeout_ms(timeout_ms) {}
+
+OffsetsForTimes::~OffsetsForTimes() {
+  // Delete the underlying topic partitions as they are ephemeral or cloned
+  RdKafka::TopicPartition::destroy(m_topic_partitions);
+}
+
+void OffsetsForTimes::Execute() {
+  Baton b = m_handle->OffsetsForTimes(m_topic_partitions, m_timeout_ms);
+  if (b.err() != RdKafka::ERR_NO_ERROR) {
+    SetErrorBaton(b);
+  }
+}
+
+void OffsetsForTimes::HandleOKCallback() {
+  Nan::HandleScope scope;
+
+  const unsigned int argc = 2;
+  v8::Local<v8::Value> argv[argc];
+
+  argv[0] = Nan::Null();
+  argv[1] = Conversion::TopicPartition::ToV8Array(m_topic_partitions);
+
+  callback->Call(argc, argv);
+}
+
+void OffsetsForTimes::HandleErrorCallback() {
+  Nan::HandleScope scope;
+
+  const unsigned int argc = 1;
+  v8::Local<v8::Value> argv[argc] = { GetErrorObject() };
+
+  callback->Call(argc, argv);
+}
+}  // namespace Handle
 
 ConnectionMetadata::ConnectionMetadata(
   Nan::Callback *callback, Connection* connection,
@@ -379,14 +440,22 @@ void KafkaConsumerConsumeLoop::Execute(const ExecutionMessageBus& bus) {
         // when in consume loop mode
         // Randomise the wait time to avoid contention on different
         // slow topics
+        #ifndef _WIN32
         usleep(static_cast<int>(rand_r(&m_rand_seed) * 1000 * 1000 / RAND_MAX));
+        #else
+        _sleep(1000);
+        #endif
         break;
       case RdKafka::ERR__TIMED_OUT:
       case RdKafka::ERR__TIMED_OUT_QUEUE:
         // If it is timed out this could just mean there were no
         // new messages fetched quickly enough. This isn't really
         // an error that should kill us.
+        #ifndef _WIN32
         usleep(500*1000);
+        #else
+        _sleep(500);
+        #endif
         break;
       case RdKafka::ERR_NO_ERROR:
         bus.Send(b.data<RdKafka::Message*>());
@@ -432,7 +501,7 @@ void KafkaConsumerConsumeLoop::HandleErrorCallback() {
 /**
  * @brief KafkaConsumer get messages worker.
  *
- * This callback will get a number of message. Can be of use in streams or
+ * This callback will get a number of messages. Can be of use in streams or
  * places where you don't want an infinite loop managed in C++land and would
  * rather manage it in Node.
  *
@@ -590,19 +659,22 @@ void KafkaConsumerConsume::HandleErrorCallback() {
 
 KafkaConsumerCommitted::KafkaConsumerCommitted(Nan::Callback *callback,
                                      KafkaConsumer* consumer,
+                                     std::vector<RdKafka::TopicPartition*> & t,
                                      const int & timeout_ms) :
   ErrorAwareWorker(callback),
   m_consumer(consumer),
+  m_topic_partitions(t),
   m_timeout_ms(timeout_ms) {}
 
-KafkaConsumerCommitted::~KafkaConsumerCommitted() {}
+KafkaConsumerCommitted::~KafkaConsumerCommitted() {
+  // Delete the underlying topic partitions as they are ephemeral or cloned
+  RdKafka::TopicPartition::destroy(m_topic_partitions);
+}
 
 void KafkaConsumerCommitted::Execute() {
-  Baton b = m_consumer->Committed(m_timeout_ms);
+  Baton b = m_consumer->Committed(m_topic_partitions, m_timeout_ms);
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorBaton(b);
-  } else {
-    m_topic_partitions = b.data<std::vector<RdKafka::TopicPartition*>*>();
   }
 }
 
@@ -613,9 +685,7 @@ void KafkaConsumerCommitted::HandleOKCallback() {
   v8::Local<v8::Value> argv[argc];
 
   argv[0] = Nan::Null();
-  argv[1] = Conversion::TopicPartition::ToV8Array(*m_topic_partitions);
-
-  delete m_topic_partitions;
+  argv[1] = Conversion::TopicPartition::ToV8Array(m_topic_partitions);
 
   callback->Call(argc, argv);
 }
@@ -643,23 +713,32 @@ void KafkaConsumerCommitted::HandleErrorCallback() {
 
 KafkaConsumerSeek::KafkaConsumerSeek(Nan::Callback *callback,
                                      KafkaConsumer* consumer,
-                                     const RdKafka::TopicPartition * partition,
+                                     const RdKafka::TopicPartition * toppar,
                                      const int & timeout_ms) :
   ErrorAwareWorker(callback),
   m_consumer(consumer),
-  m_partition(partition),
+  m_toppar(toppar),
   m_timeout_ms(timeout_ms) {}
 
-KafkaConsumerSeek::~KafkaConsumerSeek() {}
+KafkaConsumerSeek::~KafkaConsumerSeek() {
+  if (m_timeout_ms > 0) {
+    // Delete it when we are done with it.
+    // However, if the timeout was less than 1, that means librdkafka is going
+    // to queue the request up asynchronously, which apparently looks like if
+    // we delete the memory here, since it was a pointer, librdkafka segfaults
+    // when it actually does the operation (since it no longer blocks).
+
+    // Well, that means we will be leaking memory when people do a timeout of 0
+    // so... we should never get to this block. But just in case...
+    delete m_toppar;
+  }
+}
 
 void KafkaConsumerSeek::Execute() {
-  Baton b = m_consumer->Seek(*m_partition, m_timeout_ms);
+  Baton b = m_consumer->Seek(*m_toppar, m_timeout_ms);
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorBaton(b);
   }
-
-  // Delete it when we are done with it.
-  delete m_partition;
 }
 
 void KafkaConsumerSeek::HandleOKCallback() {

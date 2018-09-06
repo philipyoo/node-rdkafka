@@ -24,7 +24,7 @@ CONFIG_OUTPUTS = \
 
 CPPLINT_FILES = $(wildcard src/*.cc src/*.h)
 CPPLINT_FILTER = -legal/copyright
-JSLINT_FILES = $(wildcard lib/**/*.js test/**/*.js)
+JSLINT_FILES = lib/*.js test/*.js e2e/*.js
 
 PACKAGE = $(shell node -pe 'require("./package.json").name.split("/")[1]')
 VERSION = $(shell node -pe 'require("./package.json").version')
@@ -34,7 +34,7 @@ ifeq ($(BUILDTYPE),Debug)
 GYPBUILDARGS=--debug
 endif
 
-.PHONY: all clean lint test lib docs e2e ghpages
+.PHONY: all clean lint test lib docs e2e ghpages check
 
 all: lint lib test e2e
 
@@ -44,7 +44,7 @@ cpplint:
 	@$(PYTHON) $(CPPLINT) --filter=$(CPPLINT_FILTER) $(CPPLINT_FILES)
 
 jslint: node_modules/.dirstamp
-	@./node_modules/.bin/jshint $(JSLINT_FILES)
+	@./node_modules/.bin/jshint --verbose $(JSLINT_FILES)
 
 lib: node_modules/.dirstamp $(CONFIG_OUTPUTS)
 	@$(NODE-GYP) build $(GYPBUILDARGS)
@@ -58,6 +58,9 @@ $(CONFIG_OUTPUTS): node_modules/.dirstamp binding.gyp
 
 test: node_modules/.dirstamp
 	@./node_modules/.bin/mocha $(TEST_REPORTER) $(TESTS) $(TEST_OUTPUT)
+
+check: node_modules/.dirstamp
+	@$(NODE) util/test-compile.js
 
 e2e: $(E2E_TESTS)
 	@./node_modules/.bin/mocha $(TEST_REPORTER) $(E2E_TESTS) $(TEST_OUTPUT)

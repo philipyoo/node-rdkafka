@@ -12,7 +12,6 @@
 
 #include <uv.h>
 #include <nan.h>
-#include <unistd.h>
 #include <string>
 #include <vector>
 
@@ -150,6 +149,25 @@ class MessageWorker : public ErrorAwareWorker {
   std::vector<RdKafka::Message*> m_asyncdata;
 };
 
+namespace Handle {
+class OffsetsForTimes : public ErrorAwareWorker {
+ public:
+  OffsetsForTimes(Nan::Callback*, NodeKafka::Connection*,
+    std::vector<RdKafka::TopicPartition*> &,
+    const int &);
+  ~OffsetsForTimes();
+
+  void Execute();
+  void HandleOKCallback();
+  void HandleErrorCallback();
+
+ private:
+  NodeKafka::Connection * m_handle;
+  std::vector<RdKafka::TopicPartition*> m_topic_partitions;
+  const int m_timeout_ms;
+};
+}  // namespace Handle
+
 class ConnectionMetadata : public ErrorAwareWorker {
  public:
   ConnectionMetadata(Nan::Callback*, NodeKafka::Connection*,
@@ -167,8 +185,6 @@ class ConnectionMetadata : public ErrorAwareWorker {
   bool m_all_topics;
 
   RdKafka::Metadata* m_metadata;
-
-  // Now this is the data that will get translated in the OK callback
 };
 
 class ConnectionQueryWatermarkOffsets : public ErrorAwareWorker {
@@ -289,7 +305,8 @@ class KafkaConsumerConsume : public ErrorAwareWorker {
 class KafkaConsumerCommitted : public ErrorAwareWorker {
  public:
   KafkaConsumerCommitted(Nan::Callback*,
-    NodeKafka::KafkaConsumer*, const int &);
+    NodeKafka::KafkaConsumer*, std::vector<RdKafka::TopicPartition*> &,
+    const int &);
   ~KafkaConsumerCommitted();
 
   void Execute();
@@ -297,8 +314,8 @@ class KafkaConsumerCommitted : public ErrorAwareWorker {
   void HandleErrorCallback();
  private:
   NodeKafka::KafkaConsumer * m_consumer;
+  std::vector<RdKafka::TopicPartition*> m_topic_partitions;
   const int m_timeout_ms;
-  std::vector<RdKafka::TopicPartition*> * m_topic_partitions;
 };
 
 class KafkaConsumerSeek : public ErrorAwareWorker {
@@ -312,7 +329,7 @@ class KafkaConsumerSeek : public ErrorAwareWorker {
   void HandleErrorCallback();
  private:
   NodeKafka::KafkaConsumer * m_consumer;
-  const RdKafka::TopicPartition * m_partition;
+  const RdKafka::TopicPartition * m_toppar;
   const int m_timeout_ms;
 };
 

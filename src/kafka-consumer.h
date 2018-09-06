@@ -24,7 +24,6 @@
 
 namespace NodeKafka {
 
-
 /**
  * @brief KafkaConsumer v8 wrapped object.
  *
@@ -47,18 +46,24 @@ class KafkaConsumer : public Connection {
   Baton Unsubscribe();
   bool IsSubscribed();
 
+  Baton Pause(std::vector<RdKafka::TopicPartition*> &);
+  Baton Resume(std::vector<RdKafka::TopicPartition*> &);
+
   // Asynchronous commit events
-  Baton Commit(std::string, int, int64_t);
+  Baton Commit(std::vector<RdKafka::TopicPartition*>);
+  Baton Commit(RdKafka::TopicPartition*);
   Baton Commit();
 
+  Baton OffsetsStore(std::vector<RdKafka::TopicPartition*> &);
   Baton GetWatermarkOffsets(std::string, int32_t, int64_t*, int64_t*);
 
   // Synchronous commit events
-  Baton CommitSync(std::string, int, int64_t);
+  Baton CommitSync(std::vector<RdKafka::TopicPartition*>);
+  Baton CommitSync(RdKafka::TopicPartition*);
   Baton CommitSync();
 
-  Baton Committed(int timeout_ms);
-  Baton Position();
+  Baton Committed(std::vector<RdKafka::TopicPartition*> &, int timeout_ms);
+  Baton Position(std::vector<RdKafka::TopicPartition*> &);
 
   Baton RefreshAssignments();
 
@@ -102,6 +107,7 @@ class KafkaConsumer : public Connection {
   static NAN_METHOD(NodeUnsubscribe);
   static NAN_METHOD(NodeCommit);
   static NAN_METHOD(NodeCommitSync);
+  static NAN_METHOD(NodeOffsetsStore);
   static NAN_METHOD(NodeCommitted);
   static NAN_METHOD(NodePosition);
   static NAN_METHOD(NodeSubscription);
@@ -109,6 +115,9 @@ class KafkaConsumer : public Connection {
   static NAN_METHOD(NodeGetWatermarkOffsets);
   static NAN_METHOD(NodeConsumeLoop);
   static NAN_METHOD(NodeConsume);
+
+  static NAN_METHOD(NodePause);
+  static NAN_METHOD(NodeResume);
 };
 
 }  // namespace NodeKafka
